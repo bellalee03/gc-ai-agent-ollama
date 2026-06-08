@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python main.py)",
+      "Bash(PYTHONUTF8=1 python main.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python main.py)"
+    ]
+  }
+}

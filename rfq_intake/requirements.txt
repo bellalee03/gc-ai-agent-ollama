@@ -1,0 +1,14 @@
+# RFQ Intake + Quote Estimation — Python dependencies
+
+# Claude API
+anthropic==0.34.2
+
+# Google Sheets API
+google-auth==2.34.0
+google-api-python-client==2.143.0
+
+# Config / env vars
+pydantic-settings==2.3.4
+
+# HTTP client — used by OutlookEmailInput
+httpx==0.27.2
