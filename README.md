@@ -2,9 +2,9 @@
 
 **GC AI AGENT** is a logistics AI agent designed to automate and support the RFQ intake process.
 
-It converts unstructured logistics quote request emails into structured, reviewable data so that users can quickly extract shipment details, identify missing information, classify shipment conditions, and prepare RFQs for pricing or follow-up.
+It reads unstructured logistics quote request emails, understands the shipment context, applies customized logistics rules, and converts messy email information into structured, reviewable RFQ data.
 
-This project is more than a basic email parser. It includes logistics-specific business rules such as hazmat detection, import/export classification, mixed-language handling, lane and rate checking, missing field validation, and email-based follow-up tracking.
+This project is not just a basic email parser. It is designed to act like an AI intake assistant for logistics operations by identifying shipment details, detecting potential risk factors, classifying import/export direction, handling Korean and English mixed emails, tracking email metadata, and preparing RFQs for pricing or follow-up.
 
 > This is a personal prototype project. All sample data is fictional and does not include real customer information, confidential business data, or proprietary pricing.
 
@@ -12,17 +12,19 @@ This project is more than a basic email parser. It includes logistics-specific b
 
 ## Overview
 
-In logistics operations, RFQ emails often arrive in inconsistent formats.
+In logistics operations, RFQ emails often arrive in inconsistent and incomplete formats.
 
-Some emails are clear and complete. Others may be vague, incomplete, or written in a mix of Korean and English. Important details such as origin, destination, cargo type, weight, dimensions, Incoterms, hazmat status, pickup address, delivery address, or requested delivery date may be missing or unclear.
+Some emails are clearly written with all shipment details. Others may be vague, informal, or written in a mix of Korean and English. Important information such as pickup location, delivery location, cargo details, weight, dimensions, Incoterms, hazmat status, shipment mode, and requested delivery date may be missing or unclear.
 
-Manually reviewing each RFQ can be repetitive and time-consuming.
+A human user usually needs to read the email carefully, understand the logistics context, determine what information is usable, decide what is missing, and prepare the request for pricing or follow-up.
 
-**GC AI AGENT** helps automate the first review step by reading RFQ email text, extracting key information, applying logistics-specific validation rules, and organizing the request into a structured format.
+**GC AI AGENT** was built to assist with this process.
 
-The goal is not to replace human pricing or sales review.
+The agent reads the RFQ email, extracts key information, applies logistics-specific judgment rules, and creates structured output that can be reviewed by a sales, operations, or pricing user.
 
-The goal is to help users process RFQs faster, reduce manual intake work, and make follow-up easier.
+The goal is not to replace human decision-making.
+
+The goal is to reduce repetitive intake work and help users review RFQs faster and more consistently.
 
 ---
 
@@ -31,71 +33,94 @@ The goal is to help users process RFQs faster, reduce manual intake work, and ma
 GC AI AGENT can:
 
 * Read unstructured RFQ email text
-* Extract key shipment details
-* Identify missing or unclear information
-* Classify shipment mode
-* Detect hazmat-related wording
-* Identify import, export, or domestic shipment direction
-* Handle Korean / English mixed RFQ content
+* Extract shipment details from inconsistent email formats
+* Understand Korean and English mixed RFQ content
+* Translate and normalize key information into structured English output
+* Classify shipment mode such as truck, ocean, air, warehouse, or multi-option request
+* Identify import, export, domestic, or cross-border shipment direction
 * Separate pickup, delivery, POL, and POD information
-* Check whether a matching rate or lane exists
-* Add pricing or manual review notes
-* Store email ID or thread information for follow-up tracking
-* Generate structured output for review, tracking, and reporting
+* Detect potential hazmat or special handling indicators based on item description and context
+* Flag oversized, heavy, unclear, or high-risk cargo for review
+* Identify missing or unclear RFQ information
+* Check whether a matching rate or lane exists in a sample rate master
+* Store email ID, thread ID, sender, subject, and received date for follow-up tracking
+* Create follow-up notes based on missing information
+* Generate structured output for pricing, sales review, or reporting
 
 ---
 
 ## Why I Built This
 
-RFQ intake is often messy.
+RFQ intake is not always straightforward.
 
-A single email can include shipment details, customer notes, partial cargo information, unclear routing, and follow-up questions all in one message.
+A real RFQ email may include partial information, informal wording, unclear shipment terms, mixed languages, or multiple service options.
 
-For example, a customer may say:
+For example, a customer may write:
 
 * “Pickup is around LA, exact address not confirmed yet”
 * “Maybe 3 or 4 pallets”
-* “Not sure if it is hazmat”
-* “Please check both air and ocean”
 * “한국에서 미국으로 보내는 건입니다”
 * “DDP 가능한지 확인 부탁드립니다”
+* “Item is battery-related parts”
+* “Not sure if it is hazmat”
+* “Please check both air and ocean options”
+* “Dims are not final yet”
+* “Can you follow up on the previous email?”
 
-These requests require more than simple keyword extraction.
+A basic parser may only extract words from the email.
 
-The system needs to understand logistics context, identify what is missing, and organize the RFQ in a way that sales or pricing teams can actually use.
-
-This project was built to explore how AI can assist with that process.
+GC AI AGENT is designed to go further by applying logistics-specific rules and creating an RFQ record that is actually useful for business review.
 
 ---
 
-## Core Customization Details
+## Key Customizations
 
-This project includes several customized rules and logic designed specifically for logistics RFQ workflows.
+This project includes customized business logic for logistics RFQ handling.
 
-### 1. Hazmat Detection
+### 1. Cargo Risk and Hazmat Judgment
 
-The agent checks whether the RFQ includes hazmat-related information.
+The agent does not only look for the exact word “hazmat.”
 
-It does not assume the cargo is hazmat or non-hazmat unless clearly stated.
+It reviews the item description, shipment context, and related wording to determine whether the cargo may require additional review.
+
+For example, the agent can flag cargo for review when the email mentions or implies items such as:
+
+* Batteries
+* Chemicals
+* Liquids
+* Aerosols
+* Engines
+* Auto parts with fluids
+* Electronics with lithium batteries
+* Flammable goods
+* Heavy machinery
+* Oversized cargo
+* Cargo with unclear commodity description
+
+The agent does not make the final hazmat decision.
+
+Instead, it assigns a review flag when the cargo appears risky, unclear, oversized, or likely to require special handling.
 
 Example logic:
 
 ```text
-If the email says "hazmat" → flag as Hazmat
-If the email says "non-hazmat" → flag as Non-Hazmat
-If the email says "not sure if hazmat" → flag as Hazmat Confirmation Required
-If hazmat status is not mentioned → mark as Not Specified
+If the email clearly says "hazmat" → mark as Hazmat
+If the email clearly says "non-hazmat" → mark as Non-Hazmat
+If the email says "not sure if hazmat" → mark as Hazmat Confirmation Required
+If the item appears potentially regulated, such as batteries or chemicals → mark as Potential Hazmat / Review Required
+If the cargo is oversized or unusually heavy → mark as Special Handling Review Required
+If no risk information is provided → mark as Not Specified
 ```
 
-This is important because hazmat status can affect pricing, carrier availability, documentation, and handling requirements.
+This helps the user know when a shipment should be reviewed more carefully before quoting.
 
 ---
 
 ### 2. Import / Export / Domestic Classification
 
-The agent classifies the shipment direction based on the origin, destination, POL, POD, pickup, and delivery details.
+The agent classifies the shipment direction based on the routing information provided in the email.
 
-Example categories:
+It reviews origin, destination, pickup location, delivery location, POL, and POD to determine whether the shipment is:
 
 | Direction    | Meaning                                       |
 | ------------ | --------------------------------------------- |
@@ -105,42 +130,44 @@ Example categories:
 | Cross-border | Shipment moving between neighboring countries |
 | Unknown      | Direction cannot be clearly determined        |
 
-This helps users quickly understand what type of operation or team may need to review the RFQ.
+This helps users quickly understand which operational flow may apply.
 
 ---
 
-### 3. Mixed-Language Handling
+### 3. Mixed Korean / English RFQ Handling
 
-RFQ emails may include both Korean and English.
+Many RFQ emails are not written in one clean format or one language.
 
-The agent is designed to extract and normalize information even when the request is written in mixed language.
+GC AI AGENT can process RFQ text that includes both Korean and English.
 
 Example:
 
 ```text
-한국에서 미국 Dallas 쪽으로 보내는 건이고,
-가능하면 DDP 조건으로 견적 부탁드립니다.
+한국에서 미국 Dallas 쪽으로 보내는 건입니다.
 Pickup은 Busan 근처이고 delivery는 Dallas, TX 입니다.
+가능하면 DDP 조건으로 견적 부탁드립니다.
 ```
 
-The agent can convert this into structured English output:
+The agent can normalize this into structured output:
 
 ```json
 {
   "origin": "Busan, Korea",
   "destination": "Dallas, TX",
-  "incoterms": "DDP",
-  "direction": "Import"
+  "direction": "Import",
+  "incoterms": "DDP"
 }
 ```
+
+This makes the output easier to review even when the original request is written informally.
 
 ---
 
 ### 4. Pickup / Delivery / POL / POD Separation
 
-In logistics emails, origin and destination can be vague.
+The agent separates routing fields instead of treating all locations as the same.
 
-The agent separates different routing fields when possible:
+This is important because logistics emails may include both inland and international routing information.
 
 | Field       | Meaning                      |
 | ----------- | ---------------------------- |
@@ -151,45 +178,50 @@ The agent separates different routing fields when possible:
 | Origin      | General shipment origin      |
 | Destination | General shipment destination |
 
-This is important because a shipment may have both inland and ocean/air routing information.
+For example, an email may say the cargo is picked up in Busan, loaded at Busan port, discharged at Los Angeles, and delivered to Dallas.
+
+The agent is designed to preserve these distinctions when the information is available.
 
 ---
 
-### 5. Email ID and Follow-Up Tracking
+### 5. Email Metadata and Follow-Up Tracking
 
-The agent can store email-related metadata so that the RFQ record can be connected back to the original email.
+The agent captures email-related metadata so the structured RFQ record can be connected back to the original conversation.
 
-Tracked fields may include:
+Tracked metadata may include:
 
 * Email ID
 * Thread ID
 * Sender email
-* Received date
 * Subject line
+* Received date
 * Thread count
 * Lead ID
-* Last updated date
+* Last updated timestamp
 
-This makes it easier to follow up on the original request, track conversation history, and avoid duplicate handling.
+This allows the user to follow up on the correct email thread, track the request history, and avoid losing context.
 
 ---
 
 ### 6. Missing Information Detection
 
-The agent checks whether important RFQ information is missing.
+The agent checks whether important RFQ fields are missing or unclear.
 
-Examples:
+Examples of missing information include:
 
-```text
-If pickup address is missing → add to missing_information
-If delivery address is missing → add to missing_information
-If cargo weight is missing → add to missing_information
-If dimensions are missing → add to missing_information
-If Incoterms are missing → add to missing_information
-If hazmat status is unclear → add to missing_information
-```
+* Exact pickup address
+* Final delivery address
+* Cargo weight
+* Cargo dimensions
+* Pallet count
+* Incoterms
+* Hazmat confirmation
+* HS code
+* Requested delivery date
+* Shipment mode
+* Final packing details
 
-This allows the user to quickly identify whether the RFQ is ready for pricing or requires follow-up.
+Instead of simply leaving fields blank, the agent creates a list of missing information and follow-up items.
 
 ---
 
@@ -197,7 +229,7 @@ This allows the user to quickly identify whether the RFQ is ready for pricing or
 
 The agent can compare extracted lane information against a sample rate master.
 
-If a matching lane exists, it can add a pricing note.
+If a matching lane exists, the agent can return a pricing note.
 
 If no matching lane is found, the RFQ is flagged for manual review.
 
@@ -207,6 +239,25 @@ Example:
 No rate found for lane: Busan, Korea → Dallas, TX.
 Please review manually or update the rate master.
 ```
+
+This helps separate RFQs that can move forward quickly from RFQs that require manual pricing review.
+
+---
+
+### 8. Follow-Up Note Generation
+
+When required information is missing, the agent creates follow-up notes.
+
+Example:
+
+```text
+Please confirm the exact pickup address in Busan.
+Please confirm whether the battery-related parts are hazmat or non-hazmat.
+Please provide final pallet count, weight, and dimensions.
+Please confirm the HS code.
+```
+
+This helps the user respond to the customer faster and more consistently.
 
 ---
 
@@ -219,15 +270,17 @@ Email Metadata Capture
    ↓
 AI Extraction
    ↓
-Logistics Rule Validation
+Logistics Context Review
    ↓
-Hazmat / Direction / Mode Classification
+Cargo Risk / Hazmat Judgment
+   ↓
+Import / Export Classification
    ↓
 Missing Information Check
    ↓
 Rate / Lane Check
    ↓
-Structured Output
+Structured RFQ Output
    ↓
 Follow-Up Tracking
 ```
@@ -255,6 +308,8 @@ Requested delivery: Next Friday
 
 Thank you.
 ```
+
+---
 
 ### Messy RFQ Example
 
@@ -293,9 +348,9 @@ Thanks.
   "email_id": "sample-email-12345",
   "thread_id": "sample-thread-789",
   "received_date": "2026-06-22",
-  "customer": "Unknown",
   "sender_email": "sample.sender@example.com",
   "subject": "RFQ Request - Korea to Dallas",
+  "customer": "Unknown",
   "mode": "Air / Ocean options requested",
   "direction": "Import",
   "origin": "Busan, Korea",
@@ -309,7 +364,9 @@ Thanks.
   "dimensions": "Standard pallet size, not confirmed",
   "weight": "Approximately 2,500 to 3,000 lbs total",
   "incoterms": "DDP",
-  "hazmat_status": "Hazmat confirmation required",
+  "hazmat_status": "Hazmat Confirmation Required",
+  "cargo_risk_flag": "Potential Hazmat / Review Required",
+  "special_handling_flag": "Review Required",
   "requested_delivery_date": "Sometime next week",
   "additional_info": "Customer requested both air and ocean options.",
   "missing_information": [
@@ -323,14 +380,15 @@ Thanks.
     "HS code"
   ],
   "status": "Need Info",
-  "pricing_notes": "RFQ requires follow-up before final pricing. Hazmat status, final cargo details, and routing information are not fully confirmed.",
+  "pricing_notes": "RFQ requires follow-up before final pricing. Cargo may require hazmat or special handling review. Final cargo details and routing information are not fully confirmed.",
   "follow_up_required": true,
   "follow_up_notes": [
     "Confirm exact pickup address in Busan",
     "Confirm final delivery address in Dallas",
-    "Confirm hazmat or non-hazmat status",
+    "Confirm whether the battery-related parts are hazmat or non-hazmat",
     "Confirm final pallet count, weight, and dimensions",
-    "Confirm HS code for battery-related parts"
+    "Confirm HS code",
+    "Confirm preferred mode between air and ocean"
   ],
   "last_updated": "2026-06-22"
 }
@@ -340,50 +398,52 @@ Thanks.
 
 ## Output Fields
 
-| Field               | Description                                                 |
-| ------------------- | ----------------------------------------------------------- |
-| quote_id            | Unique RFQ reference number                                 |
-| email_id            | Original email ID for follow-up tracking                    |
-| thread_id           | Email thread ID                                             |
-| received_date       | Date the RFQ was received                                   |
-| customer            | Customer or prospect name                                   |
-| sender_email        | Sender email address                                        |
-| subject             | Email subject line                                          |
-| mode                | Shipment mode                                               |
-| direction           | Import, export, domestic, cross-border, or unknown          |
-| origin              | General shipment origin                                     |
-| destination         | General shipment destination                                |
-| pickup_from         | Actual pickup location                                      |
-| delivery_to         | Final delivery location                                     |
-| pol                 | Port of Loading                                             |
-| pod                 | Port of Discharge                                           |
-| item                | Commodity or cargo description                              |
-| quantity            | Pallet, box, container, or unit count                       |
-| dimensions          | Cargo dimensions                                            |
-| weight              | Shipment weight                                             |
-| incoterms           | DDP, EXW, FOB, FCA, etc.                                    |
-| hazmat_status       | Hazmat, non-hazmat, not specified, or confirmation required |
-| missing_information | List of missing or unclear fields                           |
-| status              | RFQ processing status                                       |
-| pricing_notes       | Rate check or manual review notes                           |
-| follow_up_required  | Whether follow-up is needed                                 |
-| follow_up_notes     | Suggested follow-up items                                   |
-| last_updated        | Last update timestamp                                       |
+| Field                 | Description                                                      |
+| --------------------- | ---------------------------------------------------------------- |
+| quote_id              | Unique RFQ reference number                                      |
+| email_id              | Original email ID for follow-up tracking                         |
+| thread_id             | Email thread ID                                                  |
+| received_date         | Date the RFQ was received                                        |
+| sender_email          | Sender email address                                             |
+| subject               | Email subject line                                               |
+| customer              | Customer or prospect name                                        |
+| mode                  | Shipment mode                                                    |
+| direction             | Import, export, domestic, cross-border, or unknown               |
+| origin                | General shipment origin                                          |
+| destination           | General shipment destination                                     |
+| pickup_from           | Actual pickup location                                           |
+| delivery_to           | Final delivery location                                          |
+| pol                   | Port of Loading                                                  |
+| pod                   | Port of Discharge                                                |
+| item                  | Commodity or cargo description                                   |
+| quantity              | Pallet, box, container, or unit count                            |
+| dimensions            | Cargo dimensions                                                 |
+| weight                | Shipment weight                                                  |
+| incoterms             | DDP, EXW, FOB, FCA, etc.                                         |
+| hazmat_status         | Hazmat, non-hazmat, not specified, or confirmation required      |
+| cargo_risk_flag       | Indicates whether the item may require additional review         |
+| special_handling_flag | Indicates oversized, heavy, unclear, or special cargo conditions |
+| missing_information   | List of missing or unclear fields                                |
+| status                | RFQ processing status                                            |
+| pricing_notes         | Rate check or manual review notes                                |
+| follow_up_required    | Whether follow-up is needed                                      |
+| follow_up_notes       | Suggested follow-up questions                                    |
+| last_updated          | Last update timestamp                                            |
 
 ---
 
 ## Status Logic
 
-Each RFQ is assigned a status based on extracted information and validation results.
+Each RFQ is assigned a status based on the extracted information and validation results.
 
-| Status          | Meaning                            |
-| --------------- | ---------------------------------- |
-| New             | RFQ was received and parsed        |
-| Need Info       | Required information is missing    |
-| Rate Found      | Matching rate or lane exists       |
-| No Rate Found   | No matching rate was found         |
-| Review Required | Human review is needed             |
-| Completed       | RFQ has been reviewed or processed |
+| Status          | Meaning                                    |
+| --------------- | ------------------------------------------ |
+| New             | RFQ was received and parsed                |
+| Need Info       | Required information is missing or unclear |
+| Rate Found      | Matching rate or lane exists               |
+| No Rate Found   | No matching rate was found                 |
+| Review Required | Human review is needed                     |
+| Completed       | RFQ has been reviewed or processed         |
 
 ---
 
@@ -397,6 +457,9 @@ If delivery address is missing → add to missing_information
 If weight is missing → add to missing_information
 If dimensions are missing → add to missing_information
 If Incoterms are missing → add to missing_information
+If item description suggests possible hazmat → flag as Potential Hazmat / Review Required
+If item description includes batteries, chemicals, liquids, aerosols, or flammable goods → flag for cargo risk review
+If cargo is oversized or unusually heavy → flag for special handling review
 If hazmat status is unclear → add to missing_information
 If lane is not found in rate master → status = No Rate Found
 If multiple modes are requested → flag as Multi-Option Quote
@@ -502,11 +565,11 @@ python src/main.py
 
 A logistics team receives an RFQ email from a customer.
 
-Instead of manually copying shipment details into a spreadsheet, the user can run the email text through GC AI AGENT.
+Instead of manually reviewing the full email and copying shipment details into a spreadsheet, the user can run the email text through GC AI AGENT.
 
-The agent extracts key shipment details, checks for missing information, applies logistics-specific rules, assigns a status, and creates structured output for sales or pricing review.
+The agent extracts key shipment details, reviews the logistics context, checks for possible cargo risk, identifies missing information, assigns a status, and creates structured output for sales or pricing review.
 
-If important information is missing, the agent also provides follow-up notes so the user can return to the original email thread and request clarification.
+If important information is missing, the agent also creates follow-up notes so the user can return to the original email thread and request clarification.
 
 ---
 
@@ -518,10 +581,11 @@ Key takeaways:
 
 * AI output needs validation before being used in operations
 * Structured JSON output makes data easier to review and store
-* Missing information detection is just as important as extraction
-* Hazmat and Incoterms require careful handling and should not be assumed
+* Logistics workflows require context-aware judgment, not just text extraction
+* Hazmat and special handling indicators require careful review
 * Mixed-language RFQs require normalization before review
 * Email metadata is important for follow-up and tracking
+* Missing information detection is just as important as extraction
 * Human review is still necessary for pricing decisions
 * Clean master data is important for reliable rate matching
 * AI can reduce repetitive intake work, but it should support rather than replace operational decision-making
@@ -545,6 +609,7 @@ Potential future improvements include:
 * Better multi-language normalization
 * More advanced import/export logic
 * Historical RFQ search and reporting
+* More detailed cargo risk classification
 
 ---
 
@@ -556,4 +621,4 @@ It does not include real customer data, confidential company information, or pro
 
 All examples and sample data are fictional.
 
-Final pricing and business decisions should always be reviewed by a human user.
+The agent is designed to assist RFQ intake and review. Final pricing, hazmat classification, and business decisions should always be reviewed by a human user.
